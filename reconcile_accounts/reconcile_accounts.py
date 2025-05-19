@@ -29,9 +29,10 @@ import argparse
 import csv
 import datetime
 
-from operator import attrgetter
 from collections import defaultdict
 from dataclasses import dataclass
+from decimal import Decimal
+from operator import attrgetter
 from pathlib import Path
 from typing import Self
 
@@ -40,8 +41,8 @@ from typing import Self
 class Transaction:
     Date: datetime.datetime
     Department: str
-    Value: float
     Counterpart: str
+    Value: Decimal
     Status: str = "MISSING"
 
     @classmethod
@@ -49,15 +50,16 @@ class Transaction:
         return Transaction(
             Date=datetime.datetime.strptime(line[0], "%Y-%m-%d"),
             Department=line[1],
-            Value=float(line[2]),
             Counterpart=line[3],
+            Value=Decimal(line[2]),
         )
 
     def __str__(self) -> str:
         return f"Transaction: {self.Date:%Y-%m-%d} | {self.Department:>12} | {self.Counterpart:>12} | {self.Value:>4.2f} | Status: {self.Status:>8}"
 
-    def __hash__(self) -> int:
-        return hash((self.Department, self.Value, self.Counterpart))
+    def id(self) -> tuple[str, str, Decimal]:
+        """utility function to group the transactions"""
+        return (self.Department, self.Counterpart, self.Value)
 
     def is_reconciable(self, other: Self) -> bool:
         # map is one to one, if transactions was already reconciled, ignore
@@ -65,7 +67,7 @@ class Transaction:
             return False
 
         # Department, Value and Conterparty must be the same
-        if hash(self) != hash(other):
+        if self.id() != other.id():
             return False
 
         # Date must be within 1 day
@@ -88,15 +90,14 @@ def reconcile_accounts(
     accountA: list[Transaction], accountB: list[Transaction]
 ) -> tuple[list[Transaction], list[Transaction]]:
     """Reconciles transactions between two lists of transactions."""
-
     # create a dictionary to avoid O(n^2) complexity
     dA = defaultdict(list)
     for ta in accountA:
-        dA[ta].append(ta)
+        dA[ta.id()].append(ta)
 
     for tb in accountB:
         # must check earlier dates first (eairlier trans has priority)
-        for ta in sorted(dA[tb], key=attrgetter("Date")):
+        for ta in sorted(dA[tb.id()], key=attrgetter("Date")):
             status = tb.is_reconciable(ta)
             if status:
                 ta.Status = "FOUND" if status else "NOT FOUND"
