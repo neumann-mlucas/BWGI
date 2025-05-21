@@ -30,7 +30,7 @@ def last_lines(
     """read the file lines in reverse order"""
     # initialize the memory-mapped file objects
     mm = mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)
-    # ignores last new line character
+
     pos = mm.size()
     while pos > 0:
         # find last newline character within the buffer range
@@ -43,6 +43,35 @@ def last_lines(
         pos = next
 
 
+def faster_last_lines(
+    file: BinaryIO, bufsize: int = io.DEFAULT_BUFFER_SIZE
+) -> Iterator[bytes]:
+    """avoids using mmap to not load the addrs space into memory"""
+    file.seek(0, io.SEEK_END)
+    while file.tell() > 1:
+        yield readuntil_backwards(file, b"\n", bufsize)
+
+
+def readuntil_backwards(file: BinaryIO, delimiter: bytes, limit: int) -> bytes:
+    pos, cnt = file.tell(), 0
+    buf = bytearray()
+
+    while pos > 1 and cnt < limit:
+        pos -= 1
+        file.seek(pos - 1)
+        byte = file.read(1)
+        if byte == delimiter:
+            buf.reverse()
+            buf.extend(delimiter)
+            return bytes(buf)
+        buf.extend(byte)
+        cnt += 1
+
+    buf.reverse()
+    buf.extend(delimiter)
+    return bytes(buf)
+
+
 def clean_bytes(line: bytes) -> str:
     """Convert bytes to UTF-8 string."""
     return line.decode("utf-8", errors="replace")
@@ -52,9 +81,9 @@ def main():
     args = parse_args()
     for file_path in args.files:
         with Path(file_path).open("rb") as fp:
-            for line in map(clean_bytes, last_lines(fp, args.bufsize)):
-                if line:
-                    print(line)
+            for line in map(clean_bytes, faster_last_lines(fp, args.bufsize)):
+                if line.strip():
+                    print(repr(line))
 
 
 def parse_args() -> argparse.Namespace:
