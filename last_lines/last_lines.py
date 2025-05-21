@@ -68,7 +68,8 @@ def readuntil_backwards(file: BinaryIO, delimiter: bytes, limit: int) -> bytes:
         cnt += 1
 
     buf.reverse()
-    buf.extend(delimiter)
+    if pos == 0:
+        buf.extend(delimiter)
     return bytes(buf)
 
 
@@ -81,7 +82,7 @@ def main():
     args = parse_args()
     for file_path in args.files:
         with Path(file_path).open("rb") as fp:
-            for line in map(clean_bytes, faster_last_lines(fp, args.bufsize)):
+            for line in map(clean_bytes, last_lines(fp, args.bufsize)):
                 if line.strip():
                     print(repr(line))
 
