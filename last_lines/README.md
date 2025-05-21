@@ -18,3 +18,10 @@ $ python last_lines.py log.txt
 log line 2
 log line 1\n
 ```
+
+```python
+# run project's example input
+$ python last_lines.py inp/example.txt
+# or with a maximum buffer size
+$ python last_lines.py inp/example.txt --bufsize 16
+```
