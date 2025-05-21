@@ -7,7 +7,7 @@ time. Lines are decoded as UTF-8, with invalid sequences replaced. The script ac
 one or more file paths as command-line arguments and an optional buffer size.
 
 
-#### Usage:
+#### Usage
 
 ```bash
 $ cat log.txt

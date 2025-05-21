@@ -3,7 +3,7 @@
 This script automatically reconciles financial transactions between two data sources. It identifies matching transactions based on Department, Value, and Counterpart, allowing for a 1-day date difference.
 
 
-#### Usage:
+#### Usage
 
 ```bash
 $ cat inp/transactions1.csv
