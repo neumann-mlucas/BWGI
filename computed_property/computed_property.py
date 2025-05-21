@@ -34,11 +34,10 @@ def computed_property(*dependencies: str) -> Callable:
 
     This decorator creates a property that computes its value based on specified
     dependent attributes. The value is cached and only recalculated when any of
-    the dependent attributes change or when the arguments to the property method
-    (if any) change.
+    the dependent attributes change
 
     Not implementing a dependency graph, so the dependencies are not recursive.
-    dependencies do not support mutable types to keep the example simple.
+    Dependencies do not support mutable types to keep the example simple.
     """
 
     def inner_decorator(fn: Callable) -> property:
@@ -67,6 +66,89 @@ def computed_property(*dependencies: str) -> Callable:
     return inner_decorator
 
 
+class ComputedProperty:
+    """
+    Decorator that creates a cached property whose value depends on other attributes.
+
+    Using base example from the Python documentation:
+    https://docs.python.org/3/howto/descriptor.html#properties
+    """
+
+    def __init__(self, *deps, fget=None, fset=None, fdel=None, doc=None):
+        self.fget = fget
+        self.fset = fset
+        self.fdel = fdel
+        if doc is None and fget is not None:
+            doc = fget.__doc__
+        self.__doc__ = doc
+
+        self.dependencies = deps
+        self.state = frozenset()
+        self.cache = None
+
+    def __call__(self, fget):
+        self.fget = fget
+        self.__doc__ = fget.__doc__
+        return self
+
+    def __set_name__(self, owner, name):
+        self.__name__ = name
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        if self.fget is None:
+            raise AttributeError
+
+        # new cached property code goes here
+        state = frozenset(
+            (attr, getattr(obj, attr))
+            for attr in self.dependencies
+            if hasattr(obj, attr)
+        )
+        if self.state != state or self.cache is None:
+            self.state = state
+            self.cache = self.fget(obj)
+        return self.cache
+
+    def __set__(self, obj, value):
+        if self.fset is None:
+            raise AttributeError
+        self.fset(obj, value)
+
+    def __delete__(self, obj):
+        if self.fdel is None:
+            raise AttributeError
+        self.fdel(obj)
+
+    def getter(self, fget):
+        return type(self)(
+            *self.dependencies,
+            fget=fget,
+            fset=self.fset,
+            fdel=self.fdel,
+            doc=self.__doc__,
+        )
+
+    def setter(self, fset):
+        return type(self)(
+            *self.dependencies,
+            fget=self.fget,
+            fset=fset,
+            fdel=self.fdel,
+            doc=self.__doc__,
+        )
+
+    def deleter(self, fdel):
+        return type(self)(
+            *self.dependencies,
+            fget=self.fget,
+            fset=self.fset,
+            fdel=fdel,
+            doc=self.__doc__,
+        )
+
+
 class Circle:
     def __init__(self, radius=1):
         self.radius = radius
@@ -82,6 +164,19 @@ class Circle:
 
     @diameter.deleter
     def diameter(self):
+        self.radius = 0
+
+    @ComputedProperty("radius")
+    def _diameter(self):
+        print(f">>> Calculating Diameter: {self.radius * 2}")
+        return self.radius * 2
+
+    @_diameter.setter
+    def _diameter(self, diameter):
+        self.radius = diameter / 2
+
+    @_diameter.deleter
+    def _diameter(self):
         self.radius = 0
 
 
