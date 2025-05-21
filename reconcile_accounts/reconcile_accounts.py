@@ -34,7 +34,6 @@ from dataclasses import dataclass
 from decimal import Decimal
 from operator import attrgetter
 from pathlib import Path
-from typing import Self
 
 
 @dataclass
@@ -61,7 +60,7 @@ class Transaction:
         """utility function to group the transactions"""
         return (self.Department, self.Counterpart, self.Value)
 
-    def is_reconciable(self, other: Self) -> bool:
+    def is_reconciable(self, other: "Transaction") -> bool:
         # map is one to one, if transactions was already reconciled, ignore
         if self.Status == "FOUND" or other.Status == "FOUND":
             return False
