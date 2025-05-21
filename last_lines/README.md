@@ -25,3 +25,8 @@ $ python last_lines.py inp/example.txt
 # or with a maximum buffer size
 $ python last_lines.py inp/example.txt --bufsize 16
 ```
+
+#### Extra
+
+`last_lines`: One implementation using `mmap`: simpler, more idiomatic and easier to read.
+`faster_last_lines`: One implementation using UNIX file operations "primitives" to improve memory utilization
