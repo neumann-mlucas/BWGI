@@ -56,9 +56,14 @@ class Transaction:
     def __str__(self) -> str:
         return f"Transaction: {self.Date:%Y-%m-%d} | {self.Department:>12} | {self.Counterpart:>12} | {self.Value:>4.2f} | Status: {self.Status:>8}"
 
-    def id(self) -> tuple[str, str, Decimal]:
+    def __hash__(self) -> int:
         """utility function to group the transactions"""
-        return (self.Department, self.Counterpart, self.Value)
+        return hash((self.Department, self.Counterpart, self.Value))
+
+    def __eq__(self, other) -> bool:
+        """utility function to group the transactions"""
+        to_id = lambda o: (o.Department, o.Counterpart, o.Value)
+        return to_id(self) == to_id(other)
 
     def is_reconciable(self, other: "Transaction") -> bool:
         # map is one to one, if transactions was already reconciled, ignore
@@ -66,7 +71,7 @@ class Transaction:
             return False
 
         # Department, Value and Conterparty must be the same
-        if self.id() != other.id():
+        if hash(self) != hash(other):
             return False
 
         # Date must be within 1 day
@@ -92,11 +97,11 @@ def reconcile_accounts(
     # create a dictionary to avoid O(n^2) complexity
     dA = defaultdict(list)
     for ta in accountA:
-        dA[ta.id()].append(ta)
+        dA[ta].append(ta)
 
     for tb in accountB:
         # must check earlier dates first (eairlier trans has priority)
-        for ta in sorted(dA[tb.id()], key=attrgetter("Date")):
+        for ta in sorted(dA[tb], key=attrgetter("Date")):
             status = tb.is_reconciable(ta)
             if status:
                 ta.Status = "FOUND" if status else "NOT FOUND"
